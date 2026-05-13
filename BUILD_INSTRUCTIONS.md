@@ -4,31 +4,53 @@
 
 - **App Name:** renter-move-in-move-out-protection-tools
 - **Repository:** renter-move-in-move-out-protection-tools
-- **Tech Stack:** React Native (Expo)
-- **Description:** A renter-focused toolkit for shared housing logistics and protection, covering roommate bill splitting as well as move-in and move-out documentation. It helps tenants manage shared costs and preserve evidence for deposits, disputes, and prorated transitions.
+- **Tech Stack:** Next.js 15 (App Router) + TypeScript + Tailwind + shadcn/ui
+- **Description:** renter-move-in-move-out-protection-tools
 
 ---
 
 ## Tech Stack & Setup
 
-### React Native (Expo)
+### Next.js 15 (App Router) + TypeScript + Tailwind + shadcn/ui
 
 ```bash
-npx create-expo-app@latest renter-move-in-move-out-protection-tools --template blank-typescript
+npx create-next-app@latest renter-move-in-move-out-protection-tools --typescript --tailwind --eslint --app --src-dir --import-alias "@/*"
 cd renter-move-in-move-out-protection-tools
-npm install
+# shadcn/ui (always include)
+npx shadcn@latest init -d
+npx shadcn@latest add button card input label form toast badge
+# Only add Prisma if the PRD requires data persistence:
+# npm install prisma @prisma/client
+# npx prisma init
+# Only add NextAuth if the PRD requires user login:
+# npm install next-auth@beta @auth/prisma-adapter bcryptjs
+# npm install -D @types/bcryptjs
+# Only add Stripe if the PRD explicitly requires payments:
+# npm install stripe @stripe/stripe-js
+# Only add Resend if the PRD explicitly requires email:
+# npm install resend
+```
+
+### Configuration
+
+Add to next.config.ts:
+```ts
+const nextConfig = {
+  output: "standalone",
+};
+export default nextConfig;
 ```
 
 ### Development
 
 ```bash
-npx expo start
+npm run dev
 ```
 
 ### Build
 
 ```bash
-npx expo export
+npm run build
 ```
 
 ---
@@ -727,6 +749,103 @@ Week 2
 
 ---
 
+## Dockerfile
+
+```dockerfile
+# ============================================================
+# BASE DOCKERFILE — for apps WITHOUT a database
+# If this app uses Prisma/SQLite, see the "With Prisma" section below
+# ============================================================
+
+# Stage 1: Dependencies
+FROM node:20-slim AS deps
+WORKDIR /app
+COPY package.json package-lock.json* ./
+# --ignore-scripts prevents postinstall hooks (e.g. prisma generate) from running
+# here where schema.prisma isn't available yet. Scripts run in the builder stage.
+RUN npm ci --ignore-scripts
+
+# Stage 2: Build
+FROM node:20-slim AS builder
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+# Provide build-time defaults so the build succeeds with no env vars configured
+ENV AUTH_SECRET="build-time-placeholder-secret"
+ENV NEXT_PUBLIC_APP_URL="https://localhost:3000"
+# Run any postinstall scripts now that all source files are present
+RUN npm rebuild 2>/dev/null || true
+RUN npm run build
+
+# Stage 3: Runner
+FROM node:20-slim AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+# Default AUTH_SECRET — app works with no Coolify env vars; override for production
+ENV AUTH_SECRET="forge-app-default-secret-override-in-production"
+ENV NEXT_PUBLIC_APP_URL=""
+
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nextjs
+
+COPY --from=builder /app/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+
+USER nextjs
+EXPOSE 3000
+ENV PORT=3000
+CMD ["node", "server.js"]
+
+# ============================================================
+# WITH PRISMA/SQLITE — replace the above Dockerfile entirely
+# Use this when the PRD requires data persistence or user auth
+# ============================================================
+#
+# FROM node:20-slim AS deps
+# WORKDIR /app
+# COPY package.json package-lock.json* ./
+# # --ignore-scripts prevents prisma generate from running before schema.prisma is copied
+# RUN npm ci --ignore-scripts
+#
+# FROM node:20-slim AS builder
+# # Install OpenSSL for Prisma schema engine (debian-openssl-3.0.x target)
+# RUN apt-get update -y && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
+# WORKDIR /app
+# COPY --from=deps /app/node_modules ./node_modules
+# COPY . .
+# ENV DATABASE_URL="file:/tmp/build.db"
+# ENV AUTH_SECRET="build-time-placeholder-secret"
+# ENV NEXT_PUBLIC_APP_URL="https://localhost:3000"
+# # Generate Prisma client now that schema.prisma is available
+# RUN npx prisma generate
+# RUN npm run build
+#
+# FROM node:20-slim AS runner
+# # Install OpenSSL for Prisma schema engine at runtime
+# RUN apt-get update -y && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
+# WORKDIR /app
+# ENV NODE_ENV=production
+# ENV DATABASE_URL="file:/data/app.db"
+# ENV AUTH_SECRET="forge-app-default-secret-override-in-production"
+# ENV NEXT_PUBLIC_APP_URL=""
+# RUN addgroup --system --gid 1001 nodejs
+# RUN adduser --system --uid 1001 nextjs
+# RUN mkdir -p /data && chown nextjs:nodejs /data
+# COPY --from=builder /app/public ./public
+# COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+# COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+# COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
+# # Copy full node_modules so the Prisma CLI has all its runtime deps (v6+ requires effect, c12, etc.)
+# COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
+# USER nextjs
+# EXPOSE 3000
+# ENV PORT=3000
+# CMD ["sh", "-c", "node node_modules/prisma/build/index.js db push --skip-generate && echo 'DB schema initialized' && node server.js"]
+```
+
+---
+
 ## File Organization
 
 - Keep source code in `src/` (if applicable)
@@ -740,7 +859,7 @@ Week 2
 
 ## Build Verification
 
-Run `npx expo export` and ensure zero errors before committing.
+Run `npm run build` and ensure zero errors before committing.
 
 - No TypeScript errors
 - No ESLint warnings (fix or disable with justification)
@@ -763,7 +882,107 @@ When the build is complete and verified:
 ## Required Files Checklist
 
 - [ ] `README.md` - Project description, setup instructions, tech stack
-- [ ] `.gitignore` - Appropriate for React Native (Expo)
+- [ ] `.gitignore` - Appropriate for Next.js 15 (App Router) + TypeScript + Tailwind + shadcn/ui
 - [ ] `.env.example` - Template for required environment variables (see below)
+- [ ] `Dockerfile` - Production-ready container build
 - [ ] `package.json` (or equivalent) - Dependencies and scripts
+
+---
+
+## Zero-Config Deployment Requirement
+
+**CRITICAL: This app MUST start and run correctly with NO environment variables configured in the deployment platform (Coolify). All external service dependencies must either be absent or have safe fallback defaults baked in.**
+
+Apps that crash on startup due to missing env vars will fail every deployment cycle.
+
+**CRITICAL: Never instantiate third-party API clients at module level.** Next.js evaluates top-level code during `next build` — a `new Resend(...)`, `new Stripe(...)`, or `new OpenAI(...)` call at module scope will crash the build if the API key env var is missing. Always initialize these clients **inside** the handler/function body, guarded by an env var check.
+
+---
+
+## Environment Variables (.env.example)
+
+Only include variables the app actually uses. If the PRD doesn't require a feature, don't add those variables.
+
+```bash
+# App URL (optional — remove if not needed)
+NEXT_PUBLIC_APP_URL="https://yourdomain.com"
+
+# --- Only include below if PRD requires data persistence ---
+# Database (SQLite — no external service required)
+DATABASE_URL="file:./dev.db"
+
+# --- Only include below if PRD requires user login ---
+# NextAuth secret — a default is baked into the Dockerfile; override here for production
+AUTH_SECRET="your-secret-here"  # generate with: openssl rand -base64 32
+
+# --- Only include below if PRD explicitly requires payments ---
+# STRIPE_SECRET_KEY="sk_live_..."
+# NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY="pk_live_..."
+# STRIPE_WEBHOOK_SECRET="whsec_..."
+
+# --- Only include below if PRD explicitly requires email ---
+# RESEND_API_KEY="re_..."
+# EMAIL_FROM="noreply@yourdomain.com"
+```
+
+---
+
+## Key Implementation Notes
+
+### Database (only if PRD requires persistence)
+- Use **SQLite** via Prisma: `provider = "sqlite"`, `url = env("DATABASE_URL")`
+- `DATABASE_URL` defaults to `file:/data/app.db` in the Dockerfile — no Coolify config needed
+- For local dev: `DATABASE_URL="file:./dev.db"` in `.env.local`
+- Run `npx prisma db push` after schema changes
+- **Do NOT use PostgreSQL** — no PostgreSQL server is provisioned in the deployment environment
+
+### Authentication (only if PRD requires user login)
+- Use **NextAuth v5** with the **Credentials provider** (email + password)
+- **Do NOT use Google OAuth** — no OAuth credentials are configured in deployment
+- Hash passwords with **bcrypt** (`bcryptjs` package)
+- Session strategy: **`"jwt"`** (not `"database"`) — required for Credentials provider
+- `AUTH_SECRET` defaults are baked into the Dockerfile; app works out of the box
+
+### Payments (only if PRD explicitly requires it)
+- Use Stripe only when the PRD's core functionality requires payment processing
+- If adding Stripe: handle `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted` at `/api/webhooks/stripe`
+- Make the app functional without Stripe credentials (show upgrade prompts rather than crashing)
+
+### Email (only if PRD explicitly requires it)
+- Use Resend only when the PRD requires transactional email
+- **CRITICAL: NEVER instantiate `new Resend(...)` at module level** — always inside the handler function body with a guard:
+  ```ts
+  // WRONG — causes build failure (next build evaluates module-level code):
+  const resend = new Resend(process.env.RESEND_API_KEY);
+  export async function POST(req) { ... }
+
+  // CORRECT — lazy init inside handler:
+  export async function POST(req) {
+    if (!process.env.RESEND_API_KEY) {
+      console.log("[email] RESEND_API_KEY not set, skipping email");
+      return NextResponse.json({ ok: true });
+    }
+    const { Resend } = await import("resend");
+    const resend = new Resend(process.env.RESEND_API_KEY);
+    ...
+  }
+  ```
+- Next.js evaluates module-level code during `next build` page data collection — missing env vars at module scope crash the build
+- Same rule applies to Stripe, OpenAI, and ALL third-party SDK clients — always lazy-initialize inside handler functions
+
+### Fonts
+- **Do NOT use `next/font/google`** — it fetches font files during `next build`, which can hang or fail in automated/offline build environments.
+- Use CSS/system font stacks by default.
+- If a custom font is truly required, commit the font file into the repo and use `next/font/local`; never depend on a build-time network font fetch.
+
+### Deployment
+- Coolify with Docker — always set `output: "standalone"` in next.config.ts
+- Do NOT add `COPY public ./public` in the Dockerfile if the public/ directory is empty or doesn't exist
+- The Dockerfile's CMD initializes the SQLite database on first start via `prisma db push`
+- App must respond healthy on port 3000 within 60 seconds of container start
+- **CRITICAL Dockerfile rule**: In the `deps` stage, always use `RUN npm ci --ignore-scripts`. Without `--ignore-scripts`, the `postinstall` hook (e.g. `prisma generate`) runs before `prisma/schema.prisma` is copied, causing the build to fail. Run `npx prisma generate` explicitly in the `builder` stage after `COPY . .`.
+- **Do NOT run `npx prisma db push` in the Dockerfile builder stage** — it is not needed at build time. The CMD already runs `prisma db push` at container startup when a real `/data/app.db` path is available.
+- **Use `node:20-slim` (not `node:20-alpine`)** — Debian slim avoids Alpine musl/libssl issues. Add `RUN apt-get update -y && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*` to BOTH the builder and runner stages for Prisma's schema engine.
+- **Set `binaryTargets` in schema.prisma** — always include `binaryTargets = ["native", "debian-openssl-3.0.x"]` in the Prisma generator block so Prisma generates the correct engine binary for the Debian container environment.
+- **Copy full node_modules in the runner stage** — do NOT selectively copy `node_modules/.prisma`, `node_modules/prisma`, `node_modules/@prisma` separately. Instead use `COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules` to copy everything. Prisma v6+ CLI has deep transitive deps (`@prisma/config` → `effect`, `c12`, etc.) that break if not all present.
 

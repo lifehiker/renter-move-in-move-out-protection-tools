@@ -1,0 +1,308 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum SplitMethod {
+  EQUAL
+  FIXED
+  PERCENTAGE
+}
+
+enum ChecklistStatus {
+  OK
+  DAMAGED
+  MISSING
+  REVIEW
+}
+
+enum IssueSeverity {
+  MINOR
+  MODERATE
+  MAJOR
+}
+
+enum ReportType {
+  MOVE_IN
+  MOVE_OUT
+}
+
+model User {
+  id               String            @id @default(cuid())
+  name             String?
+  email            String?           @unique
+  emailVerified    DateTime?
+  image            String?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  accounts         Account[]
+  sessions         Session[]
+  properties       Property[]        @relation("PropertyOwner")
+  memberships      HouseholdMember[]
+  reports          Report[]
+  subscriptions    Subscription[]
+  onboardingChoice String?
+}
+
+model Account {
+  id                 String  @id @default(cuid())
+  userId             String
+  type               String
+  provider           String
+  providerAccountId  String
+  refresh_token      String?
+  access_token       String?
+  expires_at         Int?
+  token_type         String?
+  scope              String?
+  id_token           String?
+  session_state      String?
+  refresh_token_expires_in Int?
+  oauth_token_secret String?
+  oauth_token        String?
+  user               User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Property {
+  id                    String            @id @default(cuid())
+  ownerId               String
+  address               String
+  city                  String?
+  state                 String?
+  postalCode            String?
+  leaseStart            DateTime
+  leaseEnd              DateTime?
+  moveInDate            DateTime?
+  monthlyRent           Float
+  securityDepositAmount Float
+  utilityCategories     Json
+  firstGoal             String?
+  notes                 String?
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+  owner                 User              @relation("PropertyOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  members               HouseholdMember[]
+  recurringBills        RecurringBill[]
+  billOccurrences       BillOccurrence[]
+  expenses              Expense[]
+  checklistItems        ChecklistItem[]
+  photos                PhotoAsset[]
+  issueNotes            IssueNote[]
+  reports               Report[]
+  shareLinks            ShareLink[]
+}
+
+model HouseholdMember {
+  id            String    @id @default(cuid())
+  propertyId    String
+  userId        String?
+  name          String
+  email         String?
+  joinedAt      DateTime?
+  leftAt        DateTime?
+  isPlaceholder Boolean   @default(true)
+  role          String?   @default("Roommate")
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  property      Property  @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  user          User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  paidExpenses  Expense[] @relation("ExpensePayer")
+
+  @@index([propertyId])
+}
+
+model RecurringBill {
+  id          String       @id @default(cuid())
+  propertyId  String
+  name        String
+  category    String
+  amount      Float
+  dueDay      Int
+  splitMethod SplitMethod
+  shareConfig Json
+  active      Boolean      @default(true)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  property    Property     @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  occurrences BillOccurrence[]
+
+  @@index([propertyId])
+}
+
+model BillOccurrence {
+  id              String        @id @default(cuid())
+  propertyId      String
+  recurringBillId String
+  monthKey        String
+  dueDate         DateTime
+  totalAmount     Float
+  shareBreakdown  Json
+  status          String        @default("OPEN")
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  property        Property      @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  recurringBill   RecurringBill @relation(fields: [recurringBillId], references: [id], onDelete: Cascade)
+
+  @@unique([recurringBillId, monthKey])
+  @@index([propertyId, dueDate])
+}
+
+model Expense {
+  id             String      @id @default(cuid())
+  propertyId     String
+  description    String
+  category       String
+  amount         Float
+  paidByMemberId String?
+  incurredAt     DateTime
+  splitMethod    SplitMethod
+  shareBreakdown Json
+  note           String?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  property       Property    @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  paidBy         HouseholdMember? @relation("ExpensePayer", fields: [paidByMemberId], references: [id], onDelete: SetNull)
+
+  @@index([propertyId, incurredAt])
+}
+
+model ChecklistTemplate {
+  id        String   @id @default(cuid())
+  area      String
+  label     String
+  sortOrder Int
+  createdAt DateTime @default(now())
+  items     ChecklistItem[]
+
+  @@unique([area, label])
+}
+
+model ChecklistItem {
+  id          String          @id @default(cuid())
+  propertyId  String
+  templateId  String?
+  area        String
+  label       String
+  note        String?
+  status      ChecklistStatus @default(OK)
+  sortOrder   Int             @default(0)
+  isCustom    Boolean         @default(false)
+  reportType  ReportType      @default(MOVE_IN)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  property    Property        @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  template    ChecklistTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  photos      PhotoAsset[]
+  issues      IssueNote[]
+
+  @@index([propertyId, area, sortOrder])
+}
+
+model PhotoAsset {
+  id                String         @id @default(cuid())
+  propertyId        String
+  checklistItemId   String?
+  room              String
+  note              String?
+  fileName          String
+  mimeType          String
+  storageMode       String         @default("INLINE")
+  storageKey        String?
+  publicUrl         String?
+  dataUrl           String?
+  captureTimestamp  DateTime?
+  uploadTimestamp   DateTime       @default(now())
+  exifTimestamp     DateTime?
+  reportType        ReportType     @default(MOVE_IN)
+  createdAt         DateTime       @default(now())
+  property          Property       @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  checklistItem     ChecklistItem? @relation(fields: [checklistItemId], references: [id], onDelete: SetNull)
+
+  @@index([propertyId, room, uploadTimestamp])
+}
+
+model IssueNote {
+  id              String         @id @default(cuid())
+  propertyId      String
+  checklistItemId String?
+  room            String
+  body            String
+  severity        IssueSeverity
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  property        Property       @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  checklistItem   ChecklistItem? @relation(fields: [checklistItemId], references: [id], onDelete: SetNull)
+
+  @@index([propertyId, room, createdAt])
+}
+
+model Report {
+  id              String     @id @default(cuid())
+  propertyId      String
+  createdById     String
+  type            ReportType
+  title           String
+  snapshot        Json
+  isWatermarked   Boolean    @default(true)
+  emailDeliveredAt DateTime?
+  shareToken      String?    @unique
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  property        Property   @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  createdBy       User       @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  shareLinks      ShareLink[]
+
+  @@index([propertyId, createdAt])
+}
+
+model ShareLink {
+  id         String    @id @default(cuid())
+  propertyId String
+  reportId   String
+  token      String    @unique
+  expiresAt  DateTime?
+  revokedAt  DateTime?
+  createdAt  DateTime  @default(now())
+  property   Property  @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  report     Report    @relation(fields: [reportId], references: [id], onDelete: Cascade)
+}
+
+model Subscription {
+  id                   String    @id @default(cuid())
+  userId               String
+  provider             String    @default("LOCAL")
+  status               String    @default("FREE")
+  plan                 String    @default("FREE")
+  interval             String?
+  stripeCustomerId     String?
+  stripeSubscriptionId String?
+  currentPeriodEnd     DateTime?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+  user                 User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
+}
