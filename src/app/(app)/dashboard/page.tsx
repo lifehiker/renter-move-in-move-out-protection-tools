@@ -1,7 +1,13 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { SectionCard, StatCard, Pill } from "@/components/ui-shell";
-import { calculateBalances, getPrimaryPropertyForUser, getUpcomingOccurrences, getUsageSummary } from "@/lib/app-data";
+import {
+  calculateBalances,
+  getPrimaryPropertyForUser,
+  getRecentActivity,
+  getUpcomingOccurrences,
+  getUsageSummary,
+} from "@/lib/app-data";
 import { currency, shortDate } from "@/lib/utils";
 import { requireCurrentUser } from "@/lib/session";
 
@@ -13,10 +19,11 @@ export default async function DashboardPage() {
     redirect("/onboarding");
   }
 
-  const [balances, upcoming, usage] = await Promise.all([
+  const [balances, upcoming, usage, recentActivity] = await Promise.all([
     calculateBalances(property.id),
     getUpcomingOccurrences(property.id),
     getUsageSummary(property.id),
+    getRecentActivity(property.id),
   ]);
 
   return (
@@ -83,6 +90,20 @@ export default async function DashboardPage() {
           </ul>
         </SectionCard>
       </section>
+
+      <SectionCard title="Recent activity" description="Quick visibility into what changed most recently across bills, issues, reports, and photo evidence.">
+        <ul className="list-clean">
+          {recentActivity.map((entry) => (
+            <li key={`${entry.type}-${entry.id}`} className="flex items-center justify-between rounded-[18px] bg-white/70 p-4">
+              <div>
+                <p className="font-semibold text-slate-950">{entry.title}</p>
+                <p className="text-sm text-slate-600">{entry.detail}</p>
+              </div>
+              <Pill>{shortDate(entry.createdAt)}</Pill>
+            </li>
+          ))}
+        </ul>
+      </SectionCard>
     </div>
   );
 }

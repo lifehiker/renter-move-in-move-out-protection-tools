@@ -83,6 +83,15 @@ export async function getPropertyForUser(propertyId: string, userId: string) {
   return property;
 }
 
+export async function requireOwnedProperty(propertyId: string, userId: string) {
+  return prisma.property.findFirstOrThrow({
+    where: {
+      id: propertyId,
+      ownerId: userId,
+    },
+  });
+}
+
 export async function ensureDefaultChecklistItems(propertyId: string) {
   const existingCount = await prisma.checklistItem.count({
     where: { propertyId },
@@ -221,6 +230,64 @@ export async function getUpcomingOccurrences(propertyId: string) {
     orderBy: { dueDate: "asc" },
     take: 10,
   });
+}
+
+export async function getRecentActivity(propertyId: string) {
+  const [expenses, issues, reports, photos] = await Promise.all([
+    prisma.expense.findMany({
+      where: { propertyId },
+      orderBy: { createdAt: "desc" },
+      take: 3,
+    }),
+    prisma.issueNote.findMany({
+      where: { propertyId },
+      orderBy: { createdAt: "desc" },
+      take: 3,
+    }),
+    prisma.report.findMany({
+      where: { propertyId },
+      orderBy: { createdAt: "desc" },
+      take: 3,
+    }),
+    prisma.photoAsset.findMany({
+      where: { propertyId },
+      orderBy: { uploadTimestamp: "desc" },
+      take: 3,
+    }),
+  ]);
+
+  return [
+    ...expenses.map((expense) => ({
+      id: expense.id,
+      type: "expense" as const,
+      title: expense.description,
+      detail: `${expense.category} expense logged`,
+      createdAt: expense.createdAt,
+    })),
+    ...issues.map((issue) => ({
+      id: issue.id,
+      type: "issue" as const,
+      title: issue.room,
+      detail: `${issue.severity.toLowerCase()} issue note added`,
+      createdAt: issue.createdAt,
+    })),
+    ...reports.map((report) => ({
+      id: report.id,
+      type: "report" as const,
+      title: report.title,
+      detail: `${report.type === "MOVE_IN" ? "Move-in" : "Move-out"} report created`,
+      createdAt: report.createdAt,
+    })),
+    ...photos.map((photo) => ({
+      id: photo.id,
+      type: "photo" as const,
+      title: photo.room,
+      detail: `${photo.fileName} uploaded`,
+      createdAt: photo.uploadTimestamp,
+    })),
+  ]
+    .sort((left, right) => right.createdAt.getTime() - left.createdAt.getTime())
+    .slice(0, 8);
 }
 
 export async function calculateBalances(propertyId: string) {

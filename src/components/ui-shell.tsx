@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { signOutUser } from "@/app/actions/app-actions";
 import { cn } from "@/lib/utils";
 import { site } from "@/lib/content";
 
@@ -43,6 +44,11 @@ export function AppHeader({
         <span className="hidden rounded-full bg-white/70 px-3 py-2 text-sm text-slate-600 md:inline-block">
           {userName || "Renter"}
         </span>
+        <form action={signOutUser}>
+          <button className="button-secondary px-4 py-2" type="submit">
+            Sign out
+          </button>
+        </form>
       </nav>
     </header>
   );

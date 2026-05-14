@@ -29,7 +29,7 @@ export default async function SharedReportPage({
         <p className="max-w-2xl text-lg leading-8 text-slate-700">
           Read-only view of the generated renter report for {link.property.address}.
         </p>
-        <Link className="button-primary" href={`/api/reports/${link.report.id}/pdf`}>
+        <Link className="button-primary" href={`/api/reports/${link.report.id}/pdf?token=${link.token}`}>
           Download PDF
         </Link>
       </section>
@@ -51,6 +51,40 @@ export default async function SharedReportPage({
             </li>
           ))}
         </ul>
+      </SectionCard>
+      <SectionCard title="Issue notes" description="Condition notes included in the saved report snapshot.">
+        <ul className="list-clean">
+          {snapshot.issues.map((issue: any, index: number) => (
+            <li className="flex items-center justify-between rounded-[18px] bg-white/70 p-4" key={`${issue.room}-${index}`}>
+              <div>
+                <p className="font-semibold text-slate-950">{issue.room}</p>
+                <p className="text-sm text-slate-600">{issue.body}</p>
+              </div>
+              <Pill>{issue.severity}</Pill>
+            </li>
+          ))}
+        </ul>
+      </SectionCard>
+      <SectionCard title="Photo evidence" description="Images captured in the report snapshot with notes and timestamps when available.">
+        <div className="three-column">
+          {snapshot.photos.map((photo: any, index: number) => (
+            <article className="rounded-[18px] bg-white/70 p-4" key={`${photo.room}-${index}`}>
+              {photo.dataUrl || photo.publicUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  alt={`${photo.room} evidence`}
+                  className="h-48 w-full rounded-[14px] object-cover"
+                  src={photo.dataUrl || photo.publicUrl}
+                />
+              ) : null}
+              <p className="mt-3 font-semibold text-slate-950">{photo.room}</p>
+              <p className="text-sm text-slate-600">{photo.note || "No note provided."}</p>
+              <p className="mt-2 text-xs uppercase tracking-[0.14em] text-slate-500">
+                Uploaded {shortDate(photo.uploadTimestamp)}
+              </p>
+            </article>
+          ))}
+        </div>
       </SectionCard>
     </main>
   );

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createPublicShareLink, createReport, emailReport } from "@/app/actions/app-actions";
 import { SectionCard, Pill } from "@/components/ui-shell";
+import { hasResend } from "@/lib/env";
 import { getPropertyForUser } from "@/lib/app-data";
 import { requireCurrentUser } from "@/lib/session";
 import { absoluteUrl, shortDate } from "@/lib/utils";
@@ -42,6 +43,12 @@ export default async function ReportsPage({
             <input name="type" type="hidden" value="MOVE_OUT" />
             <button className="button-secondary" type="submit">Generate move-out report</button>
           </form>
+        </div>
+        <div className="mt-4 flex flex-wrap gap-2 text-sm text-slate-600">
+          <Pill tone={hasResend() ? "success" : "warning"}>
+            {hasResend() ? "Email delivery configured" : "Email fallback only"}
+          </Pill>
+          <Pill tone="success">Share links available</Pill>
         </div>
       </SectionCard>
 

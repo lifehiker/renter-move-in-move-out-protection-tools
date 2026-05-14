@@ -9,6 +9,7 @@ import {
   renderToBuffer,
 } from "@react-pdf/renderer";
 import { prisma } from "@/lib/db";
+import { auth } from "@/auth";
 
 const styles = StyleSheet.create({
   page: {
@@ -114,12 +115,37 @@ export async function GET(
   { params }: { params: Promise<{ reportId: string }> },
 ) {
   const { reportId } = await params;
+  const shareToken = request.nextUrl.searchParams.get("token");
+  const session = await auth();
   const report = await prisma.report.findUnique({
     where: { id: reportId },
+    include: {
+      property: {
+        select: {
+          ownerId: true,
+        },
+      },
+    },
   });
 
   if (!report) {
     return new Response("Report not found", { status: 404 });
+  }
+
+  if (shareToken) {
+    const shareLink = await prisma.shareLink.findFirst({
+      where: {
+        reportId,
+        token: shareToken,
+        revokedAt: null,
+      },
+    });
+
+    if (!shareLink) {
+      return new Response("Share link not found", { status: 404 });
+    }
+  } else if (session?.user?.id !== report.property.ownerId) {
+    return new Response("Unauthorized", { status: 401 });
   }
 
   const pdfBuffer = await renderToBuffer(<ReportPdf report={report} />);

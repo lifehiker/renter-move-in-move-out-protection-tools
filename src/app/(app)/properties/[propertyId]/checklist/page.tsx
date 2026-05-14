@@ -134,14 +134,21 @@ export default async function ChecklistPage({
       </section>
 
       <section className="two-column">
-        <SectionCard title="Upload evidence photos" description="Server-side upload timestamps are always stored. EXIF dates are preserved when available.">
-          <form action={uploadPhoto} className="space-y-3">
-            <input name="propertyId" type="hidden" value={property.id} />
-            <label className="field"><span>Photo</span><input accept="image/*" name="file" type="file" required /></label>
-            <label className="field"><span>Room</span><input name="room" placeholder="Bathroom" required /></label>
-            <label className="field">
-              <span>Checklist item</span>
-              <select name="checklistItemId">
+          <SectionCard title="Upload evidence photos" description="Server-side upload timestamps are always stored. EXIF dates are preserved when available.">
+            <form action={uploadPhoto} className="space-y-3">
+              <input name="propertyId" type="hidden" value={property.id} />
+              <label className="field"><span>Photo</span><input accept="image/*" name="file" type="file" required /></label>
+              <label className="field"><span>Room</span><input name="room" placeholder="Bathroom" required /></label>
+              <label className="field">
+                <span>Documentation phase</span>
+                <select name="reportType">
+                  <option value="MOVE_IN">Move-in</option>
+                  <option value="MOVE_OUT">Move-out</option>
+                </select>
+              </label>
+              <label className="field">
+                <span>Checklist item</span>
+                <select name="checklistItemId">
                 <option value="">No specific item</option>
                 {property.checklistItems.map((item) => (
                   <option key={item.id} value={item.id}>{item.area} • {item.label}</option>
@@ -154,24 +161,39 @@ export default async function ChecklistPage({
           </form>
         </SectionCard>
 
-        <SectionCard title="Recent photo evidence" description="Recent uploads are shown here with room context and recorded timestamps.">
-          <ul className="list-clean">
-            {property.photos.map((photo) => (
-              <li className="rounded-[18px] bg-white/70 p-4" key={photo.id}>
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <p className="font-semibold text-slate-950">{photo.room}</p>
-                    <p className="text-sm text-slate-600">
-                      Uploaded {shortDate(photo.uploadTimestamp)} • {photo.fileName}
-                    </p>
+          <SectionCard title="Recent photo evidence" description="Recent uploads are shown here with room context and recorded timestamps.">
+            <ul className="list-clean">
+              {property.photos.map((photo) => (
+                <li className="rounded-[18px] bg-white/70 p-4" key={photo.id}>
+                  <div className="flex gap-4">
+                    {photo.dataUrl || photo.publicUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        alt={`${photo.room} evidence`}
+                        className="h-24 w-24 rounded-[14px] object-cover"
+                        src={photo.dataUrl || photo.publicUrl || undefined}
+                      />
+                    ) : null}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <p className="font-semibold text-slate-950">{photo.room}</p>
+                          <p className="text-sm text-slate-600">
+                            Uploaded {shortDate(photo.uploadTimestamp)} • {photo.fileName}
+                          </p>
+                          <p className="text-xs uppercase tracking-[0.14em] text-slate-500">
+                            {photo.reportType === "MOVE_IN" ? "Move-in evidence" : "Move-out evidence"}
+                          </p>
+                        </div>
+                        <Pill>{photo.storageMode}</Pill>
+                      </div>
+                      {photo.note ? <p className="mt-2 text-sm text-slate-600">{photo.note}</p> : null}
+                    </div>
                   </div>
-                  <Pill>{photo.storageMode}</Pill>
-                </div>
-                {photo.note ? <p className="mt-2 text-sm text-slate-600">{photo.note}</p> : null}
-              </li>
-            ))}
-          </ul>
-        </SectionCard>
+                </li>
+              ))}
+            </ul>
+          </SectionCard>
       </section>
     </div>
   );

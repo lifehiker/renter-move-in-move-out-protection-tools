@@ -53,7 +53,7 @@ RESEND_API_KEY=re_...
 EMAIL_FROM=noreply@yourdomain.com
 ```
 
-Without these, report email delivery is silently skipped with a logged message.
+Without these, report email delivery stays disabled and the reports page clearly indicates that email fallback mode is active.
 
 ---
 

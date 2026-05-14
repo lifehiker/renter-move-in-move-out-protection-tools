@@ -1,103 +1,122 @@
-# Forge PRD Tasks
+# Forge PRD Task Checklist
 
-## Foundation
-- [x] Read `PRD.md` end-to-end.
-- [x] Read `BUILD_INSTRUCTIONS.md` end-to-end.
-- [x] Inventory the repository to determine what already exists.
-- [x] Bootstrap Next.js app foundation in this repository.
-- [x] Configure `next.config.ts` with `output: "standalone"`.
-- [x] Set up shared styling, layout, navigation, and polished responsive design system.
-- [x] Add environment handling with safe local fallbacks.
+Last updated: 2026-05-14
 
-## Data Model
-- [x] Set up Prisma with a runnable local database configuration.
-- [x] Define auth models: `User`, `Account`, `Session`, `VerificationToken`.
-- [x] Define product models: `Property`, `HouseholdMember`, `RecurringBill`, `BillOccurrence`, `Expense`, `ChecklistTemplate`, `ChecklistItem`, `PhotoAsset`, `IssueNote`, `Report`, `ShareLink`, `Subscription`.
-- [x] Add enums: `SplitMethod`, `ChecklistStatus`, `IssueSeverity`, `ReportType`.
-- [x] Add seed data for default room and checklist templates.
-- [x] Run Prisma generate and migration for local development.
+Status legend:
+- `[x]` complete
+- `[-]` partially complete / needs verification or expansion
+- `[ ]` not complete
 
-## Auth
-- [x] Configure NextAuth/Auth.js v5.
-- [x] Support Google sign-in when credentials are available.
-- [x] Provide a safe local/demo sign-in fallback when Google credentials are unavailable.
-- [x] Protect authenticated app routes.
-- [x] Add sign-in and sign-out flows.
+## 1. Foundation
+- [x] Read `PRD.md` end-to-end
+- [x] Read `BUILD_INSTRUCTIONS.md` end-to-end
+- [x] Review existing routes, schema, actions, and integrations
+- [x] Confirm Next.js config uses `output: "standalone"`
+- [x] Run `npm run build` to establish current failures
+- [x] Ensure all build/runtime code avoids network-dependent build behavior
+- [x] Verify env-guarded lazy initialization for third-party integrations
 
-## Core App Shell
-- [x] Add onboarding redirect logic for first-run users.
-- [x] Build authenticated app layout and navigation.
-- [x] Build dashboard summary cards, recent activity, and upcoming recurring charges.
+## 2. Data Model
+- [x] Users, sessions, accounts, verification tokens
+- [x] Property model with address, lease dates, rent, deposit, utility categories
+- [x] Household members / roommate placeholders
+- [x] Recurring bill templates
+- [x] Monthly bill occurrences
+- [x] One-off expenses
+- [x] Checklist templates and property checklist items
+- [x] Photo assets with capture/upload timestamps and EXIF support fields
+- [x] Issue notes with severity
+- [x] Reports with snapshots and watermark flag
+- [x] Share links
+- [x] Subscription records
+- [x] Validate schema supports all required workflows cleanly in app logic
 
-## Property And Household
-- [x] Build onboarding flow for property address, roommates, move-in date, and first goal.
-- [x] Build property details page and edit form.
-- [x] Build roommate management UI.
-- [x] Support placeholder roommates without signup.
-- [x] Support roommate invite/send flow or safe fallback.
+## 3. Auth
+- [x] NextAuth route configured
+- [x] Google provider behind env guard
+- [x] Demo credentials fallback for local testing
+- [x] Protected app routes require session
+- [x] Verify session/user flow across onboarding and app routes
+- [x] Ensure sign-out/account controls exist in app UX
 
-## Bills And Expenses
-- [x] Build recurring bill CRUD.
-- [x] Support split methods: equal, fixed, percentage.
-- [x] Auto-generate monthly bill occurrences from recurring templates.
-- [x] Build one-off household expense CRUD.
-- [x] Track who paid and who owes.
-- [x] Calculate household balances and settlement summaries.
+## 4. User-Facing App Pages
+- [x] Sign-in page
+- [x] Onboarding page
+- [x] Dashboard page
+- [x] Property workspace page
+- [x] Property bills/expenses page
+- [x] Property checklist page
+- [x] Property reports page
+- [x] Billing settings page
+- [x] Shared read-only report page
+- [-] Ensure every app page is polished, responsive, and complete against PRD
 
-## Checklist, Notes, And Photos
-- [x] Build move-in/move-out checklist page.
-- [x] Use prebuilt checklist areas: entry, living room, kitchen, bathroom, bedroom, windows, walls, floors, appliances.
-- [x] Support custom checklist items per property.
-- [x] Support checklist statuses: ok, damaged, missing, needs review.
-- [x] Build issue/note logging with severity.
-- [x] Build photo upload flow from browser.
-- [x] Store upload timestamp and capture timestamp metadata.
-- [x] Preserve EXIF date when available or fall back gracefully.
-- [x] Provide safe local photo storage fallback when S3 is unavailable.
+## 5. Core Workflows
+- [x] Create first property from onboarding
+- [x] Edit property details
+- [x] Add roommate placeholder
+- [x] Invite roommate fallback flow
+- [x] Create recurring bill with equal/fixed/percentage split
+- [x] Auto-generate monthly recurring occurrences
+- [x] Add one-off expense with payer and owed amounts
+- [x] Dashboard balances and recent/upcoming activity
+- [x] Room-by-room checklist completion
+- [x] Add custom checklist item
+- [x] Issue logging with severity
+- [x] Photo upload with timestamps and storage fallback
+- [x] Move-in PDF report generation
+- [x] Move-out PDF report generation
+- [x] Shareable read-only report link
+- [x] Email report delivery with graceful fallback
+- [x] Prorated roommate transition calculator
+- [x] Ensure all actions validate ownership and inputs robustly
+- [-] Ensure move-in vs move-out data flow is represented clearly in UI and exports
 
-## Reports, Sharing, Email
-- [x] Generate move-in and move-out PDF reports.
-- [x] Include property details, checklist statuses, notes, photo thumbnails, timestamps, and declaration.
-- [x] Apply free-tier watermark/limit behavior.
-- [x] Build shareable read-only report links.
-- [x] Build email delivery flow through Resend or safe local fallback.
-- [x] Store report history.
+## 6. Billing / Email / Storage Integrations Or Safe Fallbacks
+- [x] Stripe checkout entrypoint with local Pro preview fallback
+- [x] Stripe webhook route with env guard
+- [x] Resend email sender with env guard
+- [x] S3-compatible storage writer with inline fallback
+- [x] Expose clear UX when Stripe/Resend/S3 are unavailable
+- [x] Ensure local fallbacks keep entire app runnable without credentials
 
-## Billing
-- [x] Model free tier usage limits.
-- [x] Build pricing and upgrade UX.
-- [x] Build Stripe checkout/session flow with missing-env guards.
-- [x] Build billing management page.
-- [x] Build webhook handling or safe fallback.
-
-## Public Marketing, SEO, And Legal
-- [x] Build polished homepage with renter-focused positioning.
-- [x] Build SEO landing pages:
-- [x] `/move-in-checklist-app`
+## 7. Marketing / SEO Pages
+- [x] Homepage
+- [x] Pricing page
 - [x] `/security-deposit-app`
+- [x] `/move-in-checklist-app`
 - [x] `/renter-photo-log`
 - [x] `/roommate-bill-split`
 - [x] `/prorated-rent-calculator`
 - [x] `/move-out-checklist-deposit-proof`
-- [x] Build blog/content pages:
-- [x] `how-to-document-apartment-damage-before-move-in`
-- [x] `how-to-protect-your-security-deposit-as-a-renter`
-- [x] `how-to-split-rent-when-a-roommate-moves-out-mid-month`
-- [x] `what-evidence-helps-in-a-deposit-dispute`
-- [x] `move-in-checklist-by-room-printable-and-digital`
-- [x] Add metadata, sitemap-ready structure, and internal links.
-- [x] Add legal pages: privacy, terms, disclaimer.
+- [x] Blog index
+- [x] Blog detail pages
+- [x] Privacy page
+- [x] Terms page
+- [x] Disclaimer page
+- [x] `robots.ts`
+- [x] `sitemap.ts`
+- [-] Verify metadata, internal linking, polish, and keyword alignment across pages
 
-## Deployment And Operations
-- [x] Create production-ready Dockerfile for standalone Next.js output.
-- [x] Ensure Dockerfile only copies paths that actually exist.
-- [x] Add any needed npm scripts for build, seed, and local setup.
-- [x] Document required external credentials in `HUMAN_INPUT_NEEDED.md`.
+## 8. API / Server Routes / Actions
+- [x] NextAuth route
+- [x] Stripe webhook route
+- [x] Report PDF route
+- [x] Server actions for onboarding/property/bills/checklist/reports
+- [x] Add any missing app routes/actions required by PRD
+- [x] Harden validation/error handling/authorization for actions and routes
 
-## Verification
-- [x] Run `npm run build` successfully.
-- [x] Start the dev server successfully.
-- [x] Smoke-test primary public and authenticated routes.
-- [x] Review major pages/components visually and fix polish issues.
-- [x] Test interactive forms, buttons, and navigation.
-- [x] Create `FORGE_COMPLETION_AUDIT.md` mapping PRD requirements to implementation.
+## 9. Deployment / Docker
+- [x] Production-ready Dockerfile using Next standalone output
+- [x] Confirm Dockerfile only copies directories that exist
+- [-] Test `docker build .` if Docker is available
+
+## 10. Verification
+- [x] Run `npm run build` successfully
+- [x] Start dev server successfully
+- [x] Smoke-test primary routes
+- [-] Check polished visual presentation on each page
+- [-] Test forms, buttons, navigation, and key interactions
+- [x] Create `HUMAN_INPUT_NEEDED.md` only for real credential dependencies
+- [x] Create `FORGE_COMPLETION_AUDIT.md` mapping PRD requirements to implementation
+- [x] Re-read relevant PRD sections after each major phase and update this checklist

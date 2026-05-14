@@ -11,6 +11,7 @@ import {
   createPropertyWithDefaults,
   createReportSnapshot,
   createShareLink,
+  requireOwnedProperty,
 } from "@/lib/app-data";
 import { hasResend, hasStripe } from "@/lib/env";
 import { sendReportEmail } from "@/lib/email";
@@ -18,6 +19,7 @@ import { createCheckoutSession } from "@/lib/payments";
 import { storePhotoAsset } from "@/lib/storage";
 import { absoluteUrl } from "@/lib/utils";
 import { requireCurrentUser } from "@/lib/session";
+import { signOut } from "@/auth";
 
 function parseDate(value: FormDataEntryValue | null) {
   if (!value || typeof value !== "string") {
@@ -35,6 +37,17 @@ function parseNumber(value: FormDataEntryValue | null, fallback = 0) {
 
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function parseUtilityCategories(value: FormDataEntryValue | null) {
+  if (!value || typeof value !== "string") {
+    return [];
+  }
+
+  return value
+    .split(",")
+    .map((entry) => entry.trim())
+    .filter(Boolean);
 }
 
 async function getPropertyMembers(propertyId: string) {
@@ -82,6 +95,7 @@ export async function completeOnboarding(formData: FormData) {
 export async function updatePropertyDetails(formData: FormData) {
   const user = await requireCurrentUser();
   const propertyId = String(formData.get("propertyId") || "");
+  await requireOwnedProperty(propertyId, user.id);
 
   await prisma.property.updateMany({
     where: { id: propertyId, ownerId: user.id },
@@ -95,6 +109,7 @@ export async function updatePropertyDetails(formData: FormData) {
       moveInDate: parseDate(formData.get("moveInDate")),
       monthlyRent: parseNumber(formData.get("monthlyRent")),
       securityDepositAmount: parseNumber(formData.get("securityDepositAmount")),
+      utilityCategories: parseUtilityCategories(formData.get("utilityCategories")),
       notes: String(formData.get("notes") || ""),
     },
   });
@@ -142,6 +157,7 @@ export async function addRoommate(formData: FormData) {
 export async function saveRecurringBill(formData: FormData) {
   const user = await requireCurrentUser();
   const propertyId = String(formData.get("propertyId") || "");
+  await requireOwnedProperty(propertyId, user.id);
   const members = await getPropertyMembers(propertyId);
   const splitMethod = String(formData.get("splitMethod") || "EQUAL") as SplitMethod;
 
@@ -179,6 +195,7 @@ export async function saveRecurringBill(formData: FormData) {
 export async function saveExpense(formData: FormData) {
   const user = await requireCurrentUser();
   const propertyId = String(formData.get("propertyId") || "");
+  await requireOwnedProperty(propertyId, user.id);
   const members = await getPropertyMembers(propertyId);
   const splitMethod = String(formData.get("splitMethod") || "EQUAL") as SplitMethod;
   const amount = parseNumber(formData.get("amount"));
@@ -215,9 +232,7 @@ export async function saveChecklistItem(formData: FormData) {
   const propertyId = String(formData.get("propertyId") || "");
   const itemId = String(formData.get("itemId") || "");
 
-  const property = await prisma.property.findFirstOrThrow({
-    where: { id: propertyId, ownerId: user.id },
-  });
+  const property = await requireOwnedProperty(propertyId, user.id);
 
   if (itemId) {
     await prisma.checklistItem.update({
@@ -246,9 +261,7 @@ export async function saveChecklistItem(formData: FormData) {
 export async function saveIssueNote(formData: FormData) {
   const user = await requireCurrentUser();
   const propertyId = String(formData.get("propertyId") || "");
-  const property = await prisma.property.findFirstOrThrow({
-    where: { id: propertyId, ownerId: user.id },
-  });
+  const property = await requireOwnedProperty(propertyId, user.id);
 
   await prisma.issueNote.create({
     data: {
@@ -266,6 +279,7 @@ export async function saveIssueNote(formData: FormData) {
 export async function uploadPhoto(formData: FormData) {
   const user = await requireCurrentUser();
   const propertyId = String(formData.get("propertyId") || "");
+  await requireOwnedProperty(propertyId, user.id);
   const file = formData.get("file");
 
   if (!(file instanceof File) || file.size === 0) {
@@ -326,6 +340,7 @@ export async function createReport(formData: FormData) {
   const user = await requireCurrentUser();
   const propertyId = String(formData.get("propertyId") || "");
   const type = String(formData.get("type") || "MOVE_IN") as ReportType;
+  await requireOwnedProperty(propertyId, user.id);
 
   const count = await prisma.report.count({
     where: { propertyId, property: { ownerId: user.id } },
@@ -449,6 +464,7 @@ export async function startUpgradeCheckout() {
 export async function sendInviteFallback(formData: FormData) {
   const user = await requireCurrentUser();
   const propertyId = String(formData.get("propertyId") || "");
+  await requireOwnedProperty(propertyId, user.id);
   const email = String(formData.get("email") || "");
   const name = String(formData.get("name") || "Roommate");
 
@@ -463,4 +479,8 @@ export async function sendInviteFallback(formData: FormData) {
   });
 
   revalidatePath(`/properties/${propertyId}`);
+}
+
+export async function signOutUser() {
+  await signOut({ redirectTo: "/" });
 }

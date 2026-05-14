@@ -54,6 +54,14 @@ export default async function PropertyPage({
               <label className="field"><span>Security deposit</span><input defaultValue={property.securityDepositAmount} name="securityDepositAmount" step="0.01" type="number" /></label>
             </div>
             <label className="field">
+              <span>Utility categories</span>
+              <input
+                defaultValue={Array.isArray(property.utilityCategories) ? property.utilityCategories.join(", ") : ""}
+                name="utilityCategories"
+                placeholder="Electricity, Gas, Internet, Water"
+              />
+            </label>
+            <label className="field">
               <span>Notes</span>
               <textarea defaultValue={property.notes ?? ""} name="notes" />
             </label>

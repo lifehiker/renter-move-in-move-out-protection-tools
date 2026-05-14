@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { saveExpense, saveRecurringBill } from "@/app/actions/app-actions";
+import { ProratedCalculator } from "@/components/prorated-calculator";
 import { SectionCard, Pill } from "@/components/ui-shell";
 import { calculateBalances, getPropertyForUser, getUpcomingOccurrences } from "@/lib/app-data";
 import { requireCurrentUser } from "@/lib/session";
@@ -139,34 +140,52 @@ export default async function ExpensesPage({
         </SectionCard>
       </section>
 
+      <section className="two-column">
+        <SectionCard title="Active recurring bills" description="Use these templates for rent, utilities, and any custom recurring household cost.">
+          <ul className="list-clean">
+            {property.recurringBills.map((bill) => (
+              <li className="rounded-[18px] bg-white/70 p-4" key={bill.id}>
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="font-semibold text-slate-950">{bill.name}</p>
+                    <p className="text-sm text-slate-600">
+                      {bill.category} • Due day {bill.dueDay} • {bill.splitMethod.toLowerCase()} split
+                    </p>
+                  </div>
+                  <Pill>{currency(bill.amount)}</Pill>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </SectionCard>
+
+        <SectionCard title="Recent household expenses" description="One-off reimbursements and shared purchases stay visible here for quick review.">
+          <ul className="list-clean">
+            {property.expenses.map((expense) => (
+              <li className="rounded-[18px] bg-white/70 p-4" key={expense.id}>
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="font-semibold text-slate-950">{expense.description}</p>
+                    <p className="text-sm text-slate-600">
+                      {expense.category} • {shortDate(expense.incurredAt)}
+                    </p>
+                    {expense.note ? <p className="mt-2 text-sm text-slate-600">{expense.note}</p> : null}
+                  </div>
+                  <Pill>{currency(expense.amount)}</Pill>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </SectionCard>
+      </section>
+
       <SectionCard title="Prorated roommate transition calculator" description="Useful when someone moves in or out mid-month.">
-        <ProratedCalculator rent={property.monthlyRent} />
+        <ProratedCalculator
+          defaultRent={property.monthlyRent}
+          title="Calculate a mid-month handoff"
+          description="Use this to split rent and utilities by occupied days when a roommate moves in or out during the billing cycle."
+        />
       </SectionCard>
-    </div>
-  );
-}
-
-function ProratedCalculator({ rent }: { rent: number }) {
-  const monthDays = 30;
-  const perDay = rent / monthDays;
-
-  return (
-    <div className="three-column">
-      <div className="rounded-[18px] bg-white/70 p-5">
-        <p className="font-semibold text-slate-950">Monthly rent baseline</p>
-        <p className="mt-2 text-2xl font-semibold text-slate-950">{currency(rent)}</p>
-        <p className="mt-2 text-sm text-slate-600">Example daily rate: {currency(perDay)} using a 30-day baseline.</p>
-      </div>
-      <div className="rounded-[18px] bg-white/70 p-5">
-        <p className="font-semibold text-slate-950">15-day occupancy</p>
-        <p className="mt-2 text-2xl font-semibold text-slate-950">{currency(perDay * 15)}</p>
-        <p className="mt-2 text-sm text-slate-600">Good midpoint reference for a mid-month move.</p>
-      </div>
-      <div className="rounded-[18px] bg-white/70 p-5">
-        <p className="font-semibold text-slate-950">7-day occupancy</p>
-        <p className="mt-2 text-2xl font-semibold text-slate-950">{currency(perDay * 7)}</p>
-        <p className="mt-2 text-sm text-slate-600">Useful for short overlap or handoff periods.</p>
-      </div>
     </div>
   );
 }
