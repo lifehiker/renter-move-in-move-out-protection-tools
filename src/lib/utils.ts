@@ -1,5 +1,6 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
+import { appEnv } from "@/lib/env";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -26,6 +27,5 @@ export function shortDate(value: Date | string | null | undefined) {
 }
 
 export function absoluteUrl(path: string) {
-  const base = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-  return new URL(path, base).toString();
+  return new URL(path, appEnv.appUrl).toString();
 }

@@ -1,5 +1,22 @@
+const resolvedAppUrl =
+  process.env.APP_URL ||
+  process.env.AUTH_URL ||
+  process.env.NEXTAUTH_URL ||
+  process.env.NEXT_PUBLIC_APP_URL ||
+  "http://localhost:3000";
+
+if (process.env.APP_URL) {
+  process.env.AUTH_URL = process.env.APP_URL;
+  process.env.NEXTAUTH_URL = process.env.APP_URL;
+} else if (!process.env.AUTH_URL) {
+  process.env.AUTH_URL = resolvedAppUrl;
+  process.env.NEXTAUTH_URL = process.env.AUTH_URL;
+} else if (!process.env.NEXTAUTH_URL) {
+  process.env.NEXTAUTH_URL = process.env.AUTH_URL;
+}
+
 export const appEnv = {
-  appUrl: process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
+  appUrl: resolvedAppUrl,
   authSecret: process.env.AUTH_SECRET || "dev-secret-change-me",
   googleClientId: process.env.GOOGLE_CLIENT_ID,
   googleClientSecret: process.env.GOOGLE_CLIENT_SECRET,

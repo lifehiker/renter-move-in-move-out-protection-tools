@@ -10,8 +10,9 @@ This maps each major PRD requirement to the routes, components, actions, and hel
 |---|---|
 | Next.js App Router app with standalone output | `next.config.ts` |
 | Tailwind/global visual system and responsive layout | `src/app/globals.css`, `src/components/ui-shell.tsx` |
-| Production Docker image for standalone Next app + Prisma runtime init | `Dockerfile` |
+| Production Docker image for standalone Next app + Prisma runtime init | `Dockerfile`, `.dockerignore` |
 | Prisma client and app DB access | `src/lib/db.ts`, `prisma/schema.prisma` |
+| Prisma config moved out of deprecated `package.json#prisma` key | `prisma.config.ts`, `package.json` |
 | Default checklist seed data | `prisma/seed.ts` |
 
 ## Data model
@@ -33,6 +34,7 @@ This maps each major PRD requirement to the routes, components, actions, and hel
 | Requirement | Implementation |
 |---|---|
 | NextAuth v5 setup | `src/auth.ts`, `src/app/api/auth/[...nextauth]/route.ts` |
+| Trusted self-hosted auth session handling | `src/auth.ts` (`trustHost: true`), `src/lib/env.ts` (normalizes `APP_URL` into Auth.js runtime envs), `Dockerfile` (`AUTH_TRUST_HOST=true` and runtime `AUTH_URL`/`NEXTAUTH_URL` fallback export) |
 | Google sign-in when credentials exist | `src/auth.ts`, `src/lib/env.ts` |
 | Credential-free demo mode | `src/components/sign-in-panel.tsx`, `src/app/sign-in/page.tsx` |
 | Protected app routes and current-user lookup | `src/lib/session.ts`, `src/app/(app)/layout.tsx` |
@@ -80,6 +82,7 @@ This maps each major PRD requirement to the routes, components, actions, and hel
 | Read-only share links | `src/app/actions/app-actions.ts:createPublicShareLink`, `src/lib/app-data.ts:createShareLink`, `src/app/shared/[token]/page.tsx` |
 | Public/shared PDF access only through valid share token | `src/app/api/reports/[reportId]/pdf/route.tsx` |
 | Email delivery with graceful fallback | `src/lib/email.ts`, `src/app/actions/app-actions.ts:emailReport`, `src/app/(app)/properties/[propertyId]/reports/page.tsx` |
+| Safe PDF fallback when image decoding is unstable in standalone runtime | `src/app/api/reports/[reportId]/pdf/route.tsx` renders photo evidence as room/note/timestamp entries instead of embedding binary thumbnails, preventing standalone server crashes |
 
 ## Billing and plan enforcement
 
@@ -100,7 +103,7 @@ This maps each major PRD requirement to the routes, components, actions, and hel
 | Pricing and legal pages | `src/app/pricing/page.tsx`, `src/app/privacy/page.tsx`, `src/app/terms/page.tsx`, `src/app/disclaimer/page.tsx` |
 | Blog index and 5 SEO posts | `src/app/blog/page.tsx`, `src/app/blog/[slug]/page.tsx`, `src/lib/content.ts` |
 | Robots and sitemap | `src/app/robots.ts`, `src/app/sitemap.ts` |
-| Global metadata base title/description | `src/app/layout.tsx`, `src/lib/content.ts` |
+| Global metadata base title/description | `src/app/layout.tsx`, `src/lib/content.ts`, `src/lib/env.ts` |
 
 ## Authorization hardening
 
@@ -114,14 +117,15 @@ This maps each major PRD requirement to the routes, components, actions, and hel
 
 | Verification | Result |
 |---|---|
-| `npm run build` | Passed on 2026-05-14 |
-| `npm run dev` start | Passed on 2026-05-14, local dev served on port `3001` because `3000` was already in use |
-| Public route smoke tests | `/`, `/sign-in`, `/prorated-rent-calculator` returned `200` |
+| `npm run build` | Passed on 2026-05-14 after auth/env/runtime fixes |
+| `npm run dev` start | Passed on 2026-05-14 on port `3003` |
+| Public route smoke tests | `/`, `/sign-in`, and production-style `/api/auth/session` host-header request returned expected `200` / `null` responses |
 | Auth redirect smoke test | `/dashboard` redirected to `/sign-in` before login |
 | Demo login | Verified through credentials callback on 2026-05-14 |
-| Authenticated route smoke tests | `/dashboard`, `/properties/[id]`, `/expenses`, `/checklist`, `/reports` returned `200` after login |
-| Shared route and PDF smoke tests | `/shared/[token]` returned `200`; PDF route returned `200` with owner cookie and with share token; PDF route returned `401` without auth/token |
-| Browser screenshot check | Homepage rendered successfully in Playwright screenshot at `/tmp/rentready-home.png` |
+| Authenticated route smoke tests | `/dashboard`, `/properties/[id]`, and `/properties/[id]/reports` returned `200` after login |
+| Additional authenticated route smoke tests | `/properties/[id]/checklist` and `/properties/[id]/expenses` returned `200` after login |
+| Shared route and PDF smoke tests | `/shared/[token]` returned `200`; PDF route returned `200` with owner cookie and with share token |
+| Container build check | `docker build .` could not run because this environment cannot access `/var/run/docker.sock` |
 
 ## Intentional credential-dependent items
 

@@ -3,7 +3,6 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { ReportType, SplitMethod } from "@prisma/client";
-import exifr from "exifr";
 import { prisma } from "@/lib/db";
 import {
   canCreateAnotherProperty,
@@ -306,6 +305,7 @@ export async function uploadPhoto(formData: FormData) {
   let exifTimestamp: Date | null = null;
 
   try {
+    const exifr = (await import("exifr")).default;
     const parsed = await exifr.parse(await file.arrayBuffer(), ["DateTimeOriginal"]);
     const maybeExifDate = parsed?.DateTimeOriginal;
     if (maybeExifDate instanceof Date) {

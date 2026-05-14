@@ -11,6 +11,7 @@ const config: NextAuthConfig = {
   session: {
     strategy: "jwt",
   },
+  trustHost: true,
   pages: {
     signIn: "/sign-in",
   },

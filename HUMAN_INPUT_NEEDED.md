@@ -89,3 +89,15 @@ AUTH_SECRET=your-generated-secret
 ```
 
 A default is baked into the Dockerfile so the app starts without this set. Override it for real deployments.
+
+---
+
+## Optional runtime base URL
+
+If your deployment platform lets you provide the public app origin at runtime, set:
+
+```bash
+APP_URL=https://yourdomain.com
+```
+
+The app now treats `APP_URL` as the source of truth for server-generated share links, billing redirects, sitemap URLs, metadata, and Auth.js runtime origin handling. In Docker, runtime startup mirrors `APP_URL` into `AUTH_URL` and `NEXTAUTH_URL` when those are not explicitly set.
