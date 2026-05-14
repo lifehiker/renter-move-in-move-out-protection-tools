@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { ReportType, SplitMethod } from "@prisma/client";
+import { ChecklistStatus, IssueSeverity, ReportType, SplitMethod } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import {
   canCreateAnotherProperty,
@@ -12,7 +12,7 @@ import {
   createShareLink,
   requireOwnedProperty,
 } from "@/lib/app-data";
-import { hasResend, hasStripe } from "@/lib/env";
+import { hasStripe } from "@/lib/env";
 import { sendReportEmail } from "@/lib/email";
 import { createCheckoutSession } from "@/lib/payments";
 import { storePhotoAsset } from "@/lib/storage";
@@ -62,6 +62,18 @@ function getShareConfig(formData: FormData, memberIds: string[]) {
     config[memberId] = parseNumber(formData.get(`share_${memberId}`), 0);
   }
   return config;
+}
+
+function parseEnumValue<T extends string>(
+  value: FormDataEntryValue | null,
+  allowedValues: readonly T[],
+  fallback: T,
+) {
+  if (typeof value !== "string") {
+    return fallback;
+  }
+
+  return allowedValues.includes(value as T) ? (value as T) : fallback;
 }
 
 export async function completeOnboarding(formData: FormData) {
@@ -237,7 +249,11 @@ export async function saveChecklistItem(formData: FormData) {
     await prisma.checklistItem.update({
       where: { id: itemId },
       data: {
-        status: String(formData.get("status") || "OK") as any,
+        status: parseEnumValue(
+          formData.get("status"),
+          Object.values(ChecklistStatus),
+          ChecklistStatus.OK,
+        ),
         note: String(formData.get("note") || "") || null,
       },
     });
@@ -268,7 +284,11 @@ export async function saveIssueNote(formData: FormData) {
       checklistItemId: String(formData.get("checklistItemId") || "") || null,
       room: String(formData.get("room") || "General"),
       body: String(formData.get("body") || ""),
-      severity: String(formData.get("severity") || "MINOR") as any,
+      severity: parseEnumValue(
+        formData.get("severity"),
+        Object.values(IssueSeverity),
+        IssueSeverity.MINOR,
+      ),
     },
   });
 

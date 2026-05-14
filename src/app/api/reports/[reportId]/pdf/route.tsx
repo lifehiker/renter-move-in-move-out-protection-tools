@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
 import { auth } from "@/auth";
+import type { ReportSnapshot } from "@/lib/report-snapshot";
 
 export async function GET(
   request: NextRequest,
@@ -75,8 +76,8 @@ export async function GET(
       padding: 8,
     },
   });
-  const snapshot = resolvedReport.snapshot as any;
-  const reportPhotos = (snapshot.photos as any[]).filter(
+  const snapshot = resolvedReport.snapshot as unknown as ReportSnapshot;
+  const reportPhotos = snapshot.photos.filter(
     (photo) => photo.dataUrl || photo.publicUrl,
   );
 
@@ -97,7 +98,7 @@ export async function GET(
 
           <View style={styles.section}>
             <Text>Household members</Text>
-            {snapshot.members.map((member: any, index: number) => (
+            {snapshot.members.map((member, index: number) => (
               <Text key={`${member.name}-${index}`} style={styles.item}>
                 {member.name} {member.email ? `• ${member.email}` : ""}
               </Text>
@@ -106,7 +107,7 @@ export async function GET(
 
           <View style={styles.section}>
             <Text>Checklist</Text>
-            {snapshot.checklist.map((item: any, index: number) => (
+            {snapshot.checklist.map((item, index: number) => (
               <Text key={`${item.area}-${item.label}-${index}`} style={styles.item}>
                 {item.area} • {item.label} • {item.status}
                 {item.note ? ` • ${item.note}` : ""}
@@ -116,7 +117,7 @@ export async function GET(
 
           <View style={styles.section}>
             <Text>Issue notes</Text>
-            {snapshot.issues.map((issue: any, index: number) => (
+            {snapshot.issues.map((issue, index: number) => (
               <Text key={`${issue.room}-${index}`} style={styles.item}>
                 {issue.room} • {issue.severity} • {issue.body}
               </Text>
@@ -133,7 +134,7 @@ export async function GET(
               </Text>
             ) : null}
             <View style={styles.photoGrid}>
-              {reportPhotos.slice(0, 8).map((photo: any, index: number) => (
+              {reportPhotos.slice(0, 8).map((photo, index: number) => (
                 <View key={`${photo.room}-${index}`} style={styles.photoBox}>
                   <Text>{photo.room}</Text>
                   <Text>{photo.note || "No note"}</Text>

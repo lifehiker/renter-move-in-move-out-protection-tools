@@ -12,7 +12,7 @@ This maps each major PRD requirement to the routes, components, actions, and hel
 | Tailwind/global visual system and responsive layout | `src/app/globals.css`, `src/components/ui-shell.tsx` |
 | Production Docker image for standalone Next app + Prisma runtime init | `Dockerfile`, `.dockerignore` |
 | Prisma client and app DB access | `src/lib/db.ts`, `prisma/schema.prisma` |
-| Prisma config moved out of deprecated `package.json#prisma` key | `prisma.config.ts`, `package.json` |
+| Prisma config moved out of deprecated `package.json#prisma` key, with explicit `.env` loading for CLI workflows | `prisma.config.ts`, `package.json` |
 | Default checklist seed data | `prisma/seed.ts` |
 
 ## Data model
@@ -34,7 +34,7 @@ This maps each major PRD requirement to the routes, components, actions, and hel
 | Requirement | Implementation |
 |---|---|
 | NextAuth v5 setup | `src/auth.ts`, `src/app/api/auth/[...nextauth]/route.ts` |
-| Trusted self-hosted auth session handling | `src/auth.ts` (`trustHost: true`), `src/lib/env.ts` (normalizes `APP_URL` into Auth.js runtime envs), `Dockerfile` (`AUTH_TRUST_HOST=true` and runtime `AUTH_URL`/`NEXTAUTH_URL` fallback export) |
+| Trusted self-hosted auth session handling | `src/auth.ts` (`trustHost: true`), `src/lib/env.ts` (normalizes `APP_URL` into Auth.js runtime envs), `Dockerfile` (`AUTH_TRUST_HOST=true` and runtime `AUTH_URL`/`NEXTAUTH_URL` fallback export from `APP_URL`) |
 | Google sign-in when credentials exist | `src/auth.ts`, `src/lib/env.ts` |
 | Credential-free demo mode | `src/components/sign-in-panel.tsx`, `src/app/sign-in/page.tsx` |
 | Protected app routes and current-user lookup | `src/lib/session.ts`, `src/app/(app)/layout.tsx` |
@@ -118,13 +118,16 @@ This maps each major PRD requirement to the routes, components, actions, and hel
 | Verification | Result |
 |---|---|
 | `npm run build` | Passed on 2026-05-14 after auth/env/runtime fixes |
+| `npm run lint` | Passed on 2026-05-14 |
+| `npx prisma db push` | Passed on 2026-05-14 after restoring env loading in `prisma.config.ts` |
 | `npm run dev` start | Passed on 2026-05-14 on port `3003` |
+| Standalone production server start | Passed on 2026-05-14 via container-style startup (`prisma db push --skip-generate && node .next/standalone/server.js`) on port `3006` |
 | Public route smoke tests | `/`, `/sign-in`, and production-style `/api/auth/session` host-header request returned expected `200` / `null` responses |
 | Auth redirect smoke test | `/dashboard` redirected to `/sign-in` before login |
-| Demo login | Verified through credentials callback on 2026-05-14 |
-| Authenticated route smoke tests | `/dashboard`, `/properties/[id]`, and `/properties/[id]/reports` returned `200` after login |
+| Demo login | Verified through credentials callback in dev and container-style standalone startup on 2026-05-14 |
+| Authenticated route smoke tests | `/dashboard` returned `200` in dev after login; container-style standalone login redirected correctly into the authenticated onboarding/dashboard flow |
 | Additional authenticated route smoke tests | `/properties/[id]/checklist` and `/properties/[id]/expenses` returned `200` after login |
-| Shared route and PDF smoke tests | `/shared/[token]` returned `200`; PDF route returned `200` with owner cookie and with share token |
+| Shared route and PDF smoke tests | `/shared/[token]` returned `200`; PDF route returned `200` with owner cookie and with `?token=` share-token access in both dev and standalone runtime |
 | Container build check | `docker build .` could not run because this environment cannot access `/var/run/docker.sock` |
 
 ## Intentional credential-dependent items

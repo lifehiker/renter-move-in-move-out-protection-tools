@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { addRoommate, saveChecklistItem, saveIssueNote, uploadPhoto } from "@/app/actions/app-actions";
+import { saveChecklistItem, saveIssueNote, uploadPhoto } from "@/app/actions/app-actions";
 import { SectionCard, Pill } from "@/components/ui-shell";
 import { checklistStatuses, issueSeverities } from "@/lib/checklist";
 import { getPropertyForUser, groupChecklistByRoom, severityTone, statusTone } from "@/lib/app-data";

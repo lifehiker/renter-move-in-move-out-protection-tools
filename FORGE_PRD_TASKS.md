@@ -15,6 +15,7 @@ Status legend:
 - [x] Run `npm run build` to establish current failures
 - [x] Ensure all build/runtime code avoids network-dependent build behavior
 - [x] Verify env-guarded lazy initialization for third-party integrations
+- [x] Fix Prisma CLI env loading so local `db:push` and container-style startup both work with `prisma.config.ts`
 
 ## 2. Data Model
 - [x] Users, sessions, accounts, verification tokens
@@ -111,11 +112,14 @@ Status legend:
 ## 9. Deployment / Docker
 - [x] Production-ready Dockerfile using Next standalone output
 - [x] Confirm Dockerfile only copies directories that exist
+- [x] Mirror `APP_URL` into `AUTH_URL` / `NEXTAUTH_URL` in the container entrypoint so Auth.js, share links, and callbacks use the deployment origin consistently
+- [x] Verify container-style startup sequence initializes SQLite schema before standalone server launch
 - [-] Test `docker build .` if Docker is available
   Docker is installed, but this environment cannot access `/var/run/docker.sock`, so image build verification is blocked by host permissions rather than app code.
 
 ## 10. Verification
 - [x] Run `npm run build` successfully
+- [x] Run `npx prisma db push` successfully
 - [x] Start dev server successfully
 - [x] Smoke-test primary routes
 - [x] Check polished visual presentation on each page

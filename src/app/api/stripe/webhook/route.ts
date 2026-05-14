@@ -1,3 +1,4 @@
+import type Stripe from "stripe";
 import { prisma } from "@/lib/db";
 import { verifyStripeSignature } from "@/lib/payments";
 
@@ -16,7 +17,7 @@ export async function POST(request: Request) {
   }
 
   if (event.type === "checkout.session.completed") {
-    const session = event.data.object as any;
+    const session = event.data.object as Stripe.Checkout.Session;
     const userId = session.metadata?.userId;
 
     if (userId) {

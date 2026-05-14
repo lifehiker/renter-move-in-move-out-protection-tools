@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Pill, SectionCard } from "@/components/ui-shell";
 import { prisma } from "@/lib/db";
+import type { ReportSnapshot } from "@/lib/report-snapshot";
 import { shortDate } from "@/lib/utils";
 
 export default async function SharedReportPage({
@@ -19,7 +20,7 @@ export default async function SharedReportPage({
     notFound();
   }
 
-  const snapshot = link.report.snapshot as any;
+  const snapshot = link.report.snapshot as unknown as ReportSnapshot;
 
   return (
     <main className="page-shell space-y-6">
@@ -41,7 +42,7 @@ export default async function SharedReportPage({
       </SectionCard>
       <SectionCard title="Checklist" description="Status snapshot captured when the report was generated.">
         <ul className="list-clean">
-          {snapshot.checklist.map((item: any, index: number) => (
+          {snapshot.checklist.map((item, index: number) => (
             <li className="flex items-center justify-between rounded-[18px] bg-white/70 p-4" key={`${item.area}-${item.label}-${index}`}>
               <div>
                 <p className="font-semibold text-slate-950">{item.area} • {item.label}</p>
@@ -54,7 +55,7 @@ export default async function SharedReportPage({
       </SectionCard>
       <SectionCard title="Issue notes" description="Condition notes included in the saved report snapshot.">
         <ul className="list-clean">
-          {snapshot.issues.map((issue: any, index: number) => (
+          {snapshot.issues.map((issue, index: number) => (
             <li className="flex items-center justify-between rounded-[18px] bg-white/70 p-4" key={`${issue.room}-${index}`}>
               <div>
                 <p className="font-semibold text-slate-950">{issue.room}</p>
@@ -67,16 +68,20 @@ export default async function SharedReportPage({
       </SectionCard>
       <SectionCard title="Photo evidence" description="Images captured in the report snapshot with notes and timestamps when available.">
         <div className="three-column">
-          {snapshot.photos.map((photo: any, index: number) => (
+          {snapshot.photos.map((photo, index: number) => (
             <article className="rounded-[18px] bg-white/70 p-4" key={`${photo.room}-${index}`}>
-              {photo.dataUrl || photo.publicUrl ? (
+              {(() => {
+                const imageSrc = photo.dataUrl ?? photo.publicUrl ?? undefined;
+
+                return imageSrc ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  alt={`${photo.room} evidence`}
-                  className="h-48 w-full rounded-[14px] object-cover"
-                  src={photo.dataUrl || photo.publicUrl}
-                />
-              ) : null}
+                  <img
+                    alt={`${photo.room} evidence`}
+                    className="h-48 w-full rounded-[14px] object-cover"
+                    src={imageSrc}
+                  />
+                ) : null;
+              })()}
               <p className="mt-3 font-semibold text-slate-950">{photo.room}</p>
               <p className="text-sm text-slate-600">{photo.note || "No note provided."}</p>
               <p className="mt-2 text-xs uppercase tracking-[0.14em] text-slate-500">
