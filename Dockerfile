@@ -24,6 +24,10 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV DATABASE_URL="file:/data/app.db"
 ENV AUTH_SECRET="forge-app-default-secret-override-in-production"
+# Auth.js / NextAuth v5 refuses to serve when behind a proxy unless this is set
+# (errors.authjs.dev#untrustedhost). Coolify is always proxied. Without it,
+# every request to an auth-using app returns 502.
+ENV AUTH_TRUST_HOST=1
 ENV NEXT_PUBLIC_APP_URL=""
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
@@ -39,4 +43,4 @@ EXPOSE 3000
 ENV PORT=3000
 # Bind Next.js to all interfaces — see HOSTNAME comment in the simple template above.
 ENV HOSTNAME=0.0.0.0
-CMD ["sh", "-c", "node node_modules/prisma/build/index.js db push --skip-generate && echo 'DB schema initialized' && HOSTNAME=0.0.0.0 exec node server.js"]
+CMD ["sh", "-c", "node node_modules/prisma/build/index.js db push --url \"$DATABASE_URL\" && echo 'DB schema initialized' && HOSTNAME=0.0.0.0 exec node server.js"]
